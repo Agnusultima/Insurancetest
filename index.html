@@ -1,0 +1,1007 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NICL AO Phase I Model Examination Practice App</title>
+  <!-- jsPDF & html2canvas library for PDF export -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <style>
+    :root {
+      --primary: #003366;
+      --secondary: #0056b3;
+      --bg: #f4f7f9;
+      --panel-bg: #ffffff;
+      --text: #333333;
+      --correct: #28a745;
+      --wrong: #dc3545;
+      --border: #cccccc;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+
+    body {
+      background-color: var(--bg);
+      color: var(--text);
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    /* Header */
+    header {
+      background-color: var(--primary);
+      color: white;
+      padding: 10px 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+      flex-shrink: 0;
+    }
+
+    header h1 {
+      font-size: 1.1rem;
+    }
+
+    .header-right {
+      display: flex;
+      align-items: center;
+      gap: 15px;
+    }
+
+    .candidate-info {
+      font-size: 0.85rem;
+      text-align: right;
+    }
+
+    .btn-header-submit {
+      background-color: #ffc107;
+      color: #333;
+      border: none;
+      padding: 6px 12px;
+      border-radius: 4px;
+      font-weight: bold;
+      cursor: pointer;
+      font-size: 0.85rem;
+      transition: background 0.2s;
+    }
+
+    .btn-header-submit:hover {
+      background-color: #e0a800;
+    }
+
+    /* Landing Screen / Registration */
+    .landing-container {
+      flex: 1;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 20px;
+      overflow-y: auto;
+    }
+
+    .landing-card {
+      background: white;
+      padding: 30px;
+      border-radius: 8px;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+      width: 100%;
+      max-width: 450px;
+      border-top: 5px solid var(--primary);
+    }
+
+    .landing-card h2 {
+      margin-bottom: 15px;
+      color: var(--primary);
+      font-size: 1.4rem;
+    }
+
+    .form-group {
+      margin-bottom: 15px;
+    }
+
+    .form-group label {
+      display: block;
+      margin-bottom: 5px;
+      font-weight: 600;
+      font-size: 0.9rem;
+    }
+
+    .form-group input {
+      width: 100%;
+      padding: 10px;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      font-size: 1rem;
+    }
+
+    /* Top Nav / Section Tabs */
+    .section-bar {
+      background-color: #e9ecef;
+      display: flex;
+      overflow-x: auto;
+      border-bottom: 2px solid var(--border);
+      padding: 8px 10px;
+      gap: 8px;
+      flex-shrink: 0;
+    }
+
+    .section-tab {
+      padding: 6px 12px;
+      border: 1px solid var(--border);
+      background: white;
+      border-radius: 4px;
+      cursor: pointer;
+      font-weight: bold;
+      font-size: 0.85rem;
+      white-space: nowrap;
+    }
+
+    .section-tab.active {
+      background: var(--primary);
+      color: white;
+      border-color: var(--primary);
+    }
+
+    .section-tab.disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    /* Main Container */
+    .main-container {
+      display: none;
+      flex: 1;
+      flex-direction: row;
+      overflow: hidden;
+      height: calc(100vh - 100px);
+    }
+
+    /* Question Panel */
+    .question-panel {
+      flex: 3;
+      padding: 20px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+    }
+
+    .passage-box {
+      background: #f8f9fa;
+      border: 1px solid #dcdcdc;
+      border-left: 4px solid var(--primary);
+      padding: 12px;
+      margin-bottom: 15px;
+      font-size: 0.9rem;
+      line-height: 1.4;
+      max-height: 180px;
+      overflow-y: auto;
+    }
+
+    .q-header {
+      font-weight: bold;
+      font-size: 1rem;
+      margin-bottom: 12px;
+      padding-bottom: 5px;
+      border-bottom: 1px solid #ddd;
+      display: flex;
+      justify-content: space-between;
+    }
+
+    .q-text {
+      font-size: 1rem;
+      margin-bottom: 15px;
+      line-height: 1.4;
+    }
+
+    .options-list {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+
+    .option-btn {
+      padding: 10px 12px;
+      border: 2px solid var(--border);
+      background-color: white;
+      border-radius: 6px;
+      text-align: left;
+      font-size: 0.95rem;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      display: flex;
+      align-items: center;
+    }
+
+    .option-btn:hover:not(.disabled) {
+      border-color: var(--secondary);
+      background-color: #f0f7ff;
+    }
+
+    .option-btn.correct {
+      background-color: #d4edda !important;
+      border-color: var(--correct) !important;
+      color: #155724;
+      font-weight: bold;
+    }
+
+    .option-btn.wrong {
+      background-color: #f8d7da !important;
+      border-color: var(--wrong) !important;
+      color: #721c24;
+      font-weight: bold;
+    }
+
+    .option-btn.disabled {
+      cursor: default;
+    }
+
+    /* Palette Panel */
+    .palette-panel {
+      flex: 1;
+      min-width: 260px;
+      max-width: 320px;
+      background-color: #ffffff;
+      border-left: 1px solid var(--border);
+      padding: 15px;
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+      overflow-y: auto;
+    }
+
+    .palette-content {
+      flex: 1;
+      overflow-y: auto;
+      margin-bottom: 15px;
+    }
+
+    .timer-box {
+      background: #333;
+      color: #fff;
+      text-align: center;
+      padding: 8px;
+      font-size: 1.1rem;
+      font-weight: bold;
+      border-radius: 4px;
+      margin-bottom: 12px;
+    }
+
+    .palette-grid {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 6px;
+      padding: 5px;
+    }
+
+    .q-num-btn {
+      aspect-ratio: 1;
+      border: 1px solid #ccc;
+      background: #f8f9fa;
+      font-weight: bold;
+      cursor: pointer;
+      border-radius: 4px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.85rem;
+    }
+
+    .q-num-btn.active {
+      border: 2px solid #000;
+      box-shadow: 0 0 4px rgba(0,0,0,0.3);
+    }
+
+    .q-num-btn.answered-right {
+      background-color: var(--correct);
+      color: white;
+      border-color: var(--correct);
+    }
+
+    .q-num-btn.answered-wrong {
+      background-color: var(--wrong);
+      color: white;
+      border-color: var(--wrong);
+    }
+
+    .nav-actions {
+      display: flex;
+      gap: 10px;
+      margin-top: 15px;
+    }
+
+    .btn {
+      padding: 10px 14px;
+      border: none;
+      border-radius: 4px;
+      font-weight: bold;
+      cursor: pointer;
+      font-size: 0.9rem;
+      text-align: center;
+    }
+
+    .btn-primary { background: var(--secondary); color: white; flex: 1; }
+    .btn-success { background: var(--correct); color: white; width: 100%; padding: 12px; font-size: 1rem; border-radius: 6px; }
+    .btn-danger { background: var(--wrong); color: white; }
+
+    /* Result View */
+    .result-container {
+      display: none;
+      padding: 20px;
+      overflow-y: auto;
+      flex: 1;
+      background: white;
+      height: 100%;
+    }
+
+    .summary-card {
+      background: #f8f9fa;
+      border: 1px solid #ddd;
+      padding: 15px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+    }
+
+    .summary-table, .pdf-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 15px;
+      font-size: 0.85rem;
+    }
+
+    .summary-table th, .summary-table td,
+    .pdf-table th, .pdf-table td {
+      border: 1px solid #ddd;
+      padding: 8px;
+      text-align: center;
+    }
+
+    .summary-table th, .pdf-table th {
+      background-color: var(--primary);
+      color: white;
+    }
+
+    /* Print / PDF generation stylesheet area */
+    #pdf-render-area {
+      display: none;
+      padding: 20px;
+      background: white;
+      color: black;
+      width: 700px;
+    }
+
+    #pdf-render-area table {
+      font-size: 9px;
+    }
+
+    /* Mobile Responsive Overrides */
+    @media (max-width: 768px) {
+      .main-container {
+        flex-direction: column;
+        overflow-y: auto;
+        height: auto;
+      }
+      .palette-panel {
+        max-width: 100%;
+        border-left: none;
+        border-top: 1px solid var(--border);
+        height: auto;
+      }
+      .question-panel {
+        overflow-y: visible;
+        height: auto;
+      }
+      header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 10px;
+      }
+      .header-right {
+        width: 100%;
+        justify-content: space-between;
+      }
+      .candidate-info {
+        text-align: left;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Header -->
+  <header>
+    <div>
+      <h1>NICL AO Phase I Model Examination</h1>
+      <span style="font-size: 0.75rem;">Pattern: 100 Questions | 100 Marks | 60 Mins</span>
+    </div>
+    <div class="header-right">
+      <div class="candidate-info" id="headerCandidateInfo" style="display: none;">
+        <div><strong>Candidate:</strong> <span id="displayName">-</span></div>
+        <div><strong>Roll No:</strong> <span id="displayRoll">-</span></div>
+      </div>
+      <button class="btn-header-submit" id="headerSubmitBtn" style="display: none;" onclick="confirmSubmit()">Final Submit</button>
+    </div>
+  </header>
+
+  <!-- Initial Landing / Login Screen -->
+  <div class="landing-container" id="landingContainer">
+    <div class="landing-card">
+      <h2>Candidate Registration</h2>
+      <p style="margin-bottom: 15px; font-size: 0.85rem; color: #666;">Please enter your details to initialize the mock exam session.</p>
+      <form onsubmit="startExam(event)">
+        <div class="form-group">
+          <label for="candidateName">Full Name</label>
+          <input type="text" id="candidateName" required placeholder="e.g. Alex Smith">
+        </div>
+        <div class="form-group">
+          <label for="candidateRoll">Roll Number / ID</label>
+          <input type="text" id="candidateRoll" required placeholder="e.g. NICL-2026-001">
+        </div>
+        <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 10px;">Start Examination</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Section Bar -->
+  <div class="section-bar" id="sectionBar" style="display: none;">
+    <button class="section-tab active" onclick="switchSection(0)" id="tab-0">English Language (1-30)</button>
+    <button class="section-tab disabled" id="tab-1">Reasoning Ability (31-65)</button>
+    <button class="section-tab disabled" id="tab-2">Quantitative Aptitude (66-100)</button>
+  </div>
+
+  <!-- Main Exam Interface -->
+  <div class="main-container" id="examContainer">
+    <!-- Left: Question Area -->
+    <div class="question-panel">
+      <div id="passageContainer" class="passage-box" style="display:none;"></div>
+      <div class="q-header">
+        <span id="qNumberText">Question 1</span>
+        <span style="font-size: 0.85rem; color: #555;">+1 / -0.25</span>
+      </div>
+      <div class="q-text" id="qText">Loading question...</div>
+      <div class="options-list" id="optionsContainer"></div>
+
+      <div class="nav-actions">
+        <button class="btn btn-primary" onclick="prevQuestion()">Previous</button>
+        <button class="btn btn-primary" onclick="nextQuestion()">Next</button>
+      </div>
+    </div>
+
+    <!-- Right: Palette Area -->
+    <div class="palette-panel">
+      <div class="palette-content">
+        <div class="timer-box" id="timerDisplay">20:00</div>
+        <h4 style="margin-bottom: 8px; font-size: 0.95rem;">Question Palette</h4>
+        <div class="palette-grid" id="paletteGrid"></div>
+      </div>
+      <div style="padding-top: 10px; border-top: 1px solid #ddd;">
+        <button class="btn btn-success" onclick="confirmSubmit()">Submit Test</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Result Container -->
+  <div class="result-container" id="resultContainer">
+    <h2>Performance Summary</h2>
+    <div class="summary-card">
+      <p><strong>Candidate Name:</strong> <span id="resName"></span></p>
+      <p><strong>Roll Number:</strong> <span id="resRoll"></span></p>
+      <br>
+      <div style="overflow-x: auto;">
+        <table class="summary-table">
+          <thead>
+            <tr>
+              <th>Section</th>
+              <th>Attempted</th>
+              <th>Correct</th>
+              <th>Wrong</th>
+              <th>Score</th>
+            </tr>
+          </thead>
+          <tbody id="summaryTableBody"></tbody>
+        </table>
+      </div>
+      <h3 style="margin-top: 15px; text-align: right;" id="totalScoreText">Total Score: 0 / 100</h3>
+    </div>
+    
+    <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+      <button class="btn btn-primary" onclick="downloadPDF()">Download Response Sheet (PDF)</button>
+      <button class="btn btn-danger" onclick="location.reload()">Start New Session</button>
+    </div>
+  </div>
+
+  <!-- Hidden Container for PDF Rendering -->
+  <div id="pdf-render-area">
+    <h2 style="text-align: center; margin-bottom: 5px;">NICL AO Phase I Model Examination</h2>
+    <h4 style="text-align: center; margin-bottom: 10px;">Candidate Response Sheet</h4>
+    <p><strong>Candidate:</strong> <span id="pdfName"></span> | <strong>Roll No:</strong> <span id="pdfRoll"></span></p>
+    <hr style="margin: 10px 0;">
+    <table class="pdf-table">
+      <thead>
+        <tr>
+          <th>Q.No</th>
+          <th>Question Text</th>
+          <th>Chosen Option</th>
+          <th>Correct Option</th>
+          <th>Status</th>
+          <th>Marks</th>
+        </tr>
+      </thead>
+      <tbody id="pdfTableBody"></tbody>
+    </table>
+  </div>
+
+  <script>
+    let candidateName = "";
+    let candidateRoll = "";
+
+    // Full Question Data (1-100)
+    const questionsData = [
+      // English Language (1-30)
+      { id: 1, section: 0, passageId: 1, text: "What is the central idea of the passage?", options: ["A) Comprehension checks prevent participation", "B) Staff costs must always be reduced", "C) Low prices guarantee policy renewal", "D) Digital access works best with clear communication and support", "E) Telephone services should replace all mobile services"], ans: "D" },
+      { id: 2, section: 0, passageId: 1, text: "Why did many users initially abandon registration?", options: ["A) Managers rejected payments", "B) The help desk charged a fee", "C) Policies were unavailable", "D) The renewal season had ended", "E) Instructions and terms were difficult to understand"], ans: "E" },
+      { id: 3, section: 0, passageId: 1, text: "Which outcome followed the changes?", options: ["A) Coverage became identical for everyone", "B) Staff costs fell", "C) Policy prices doubled", "D) Registrations stopped", "E) Completion rates improved"], ans: "E" },
+      { id: 4, section: 0, passageId: 1, text: "Why was a comprehension check added?", options: ["A) To reduce registrations", "B) To increase policy prices", "C) To replace the survey", "D) To check understanding of coverage", "E) To eliminate monthly reviews"], ans: "D" },
+      { id: 5, section: 0, passageId: 1, text: "Which statement is supported by the passage?", options: ["A) Digital services always reduce costs", "B) Monthly reviews were cancelled", "C) The help desk was retained for the renewal season", "D) Every user understood the coverage", "E) Price was the main difficulty"], ans: "C" },
+      { id: 6, section: 0, passageId: 1, text: "The word \"retain\" most nearly means:", options: ["A) postpone", "B) keep", "C) compare", "D) discard", "E) conceal"], ans: "B" },
+      { id: 7, section: 0, passageId: 1, text: "Which inference is most reasonable?", options: ["A) A completed transaction and an informed choice are different measures", "B) Higher staff costs prove failure", "C) Surveys cannot identify problems", "D) Clear language makes assistance unnecessary", "E) All traders dislike technology"], ans: "A" },
+      
+      { id: 8, section: 0, passageId: 2, text: "Choose the word for blank 8.", options: ["A) prevent", "B) enable", "C) compel", "D) avoid", "E) refuse"], ans: "B" },
+      { id: 9, section: 0, passageId: 2, text: "Choose the word for blank 9.", options: ["A) concealed", "B) recorded", "C) removed", "D) forgotten", "E) denied"], ans: "B" },
+      { id: 10, section: 0, passageId: 2, text: "Choose the word for blank 10.", options: ["A) invent", "B) cancel", "C) ignore", "D) protect", "E) identify"], ans: "E" },
+      { id: 11, section: 0, passageId: 2, text: "Choose the word for blank 11.", options: ["A) since", "B) unless", "C) whereas", "D) despite", "E) although"], ans: "B" },
+      { id: 12, section: 0, passageId: 2, text: "Choose the word for blank 12.", options: ["A) extend", "B) repeat", "C) invite", "D) approve", "E) prevent"], ans: "E" },
+      
+      { id: 13, section: 0, text: "Identify the part containing an error: Neither of the two proposals / have received / final approval / from the committee.", options: ["A) No error", "B) Neither of the two proposals", "C) from the committee.", "D) final approval", "E) have received"], ans: "E" },
+      { id: 14, section: 0, text: "Identify the part containing an error: The manager asked / whether each applicant / had submitted / their documents on time.", options: ["A) whether each applicant", "B) their documents on time.", "C) No error", "D) had submitted", "E) The manager asked"], ans: "C" },
+      { id: 15, section: 0, text: "Identify the part containing an error: The number of pending claims / are increasing / despite the additional staff / appointed last month.", options: ["A) appointed last month.", "B) are increasing", "C) despite the additional staff", "D) No error", "E) The number of pending claims"], ans: "B" },
+      { id: 16, section: 0, text: "Identify the part containing an error: She is senior / than her colleague / in the regional office / by three years.", options: ["A) than her colleague", "B) by three years.", "C) in the regional office", "D) No error", "E) She is senior"], ans: "A" },
+      { id: 17, section: 0, text: "Identify the part containing an error: Hardly had the meeting begun / when the lights went out / and the participants / moved to another room.", options: ["A) and the participants", "B) when the lights went out", "C) No error", "D) Hardly had the meeting begun", "E) moved to another room."], ans: "C" },
+      
+      { id: 18, section: 0, text: "The officer insisted _____ checking the original documents.", options: ["A) on", "B) by", "C) at", "D) from", "E) for"], ans: "A" },
+      { id: 19, section: 0, text: "If the server had worked, we _____ the application yesterday.", options: ["A) are completing", "B) would have completed", "C) will complete", "D) complete", "E) had complete"], ans: "B" },
+      { id: 20, section: 0, text: "The instructions were so _____ that even first-time users followed them easily.", options: ["A) contradictory", "B) clear", "C) irrelevant", "D) ambiguous", "E) lengthy"], ans: "B" },
+      { id: 21, section: 0, text: "The insurer must strike a balance _____ speed and accuracy.", options: ["A) within", "B) through", "C) over", "D) between", "E) among"], ans: "D" },
+      { id: 22, section: 0, text: "No sooner _____ the announcement made than applications began to arrive.", options: ["A) were", "B) was", "C) had", "D) did", "E) has"], ans: "B" },
+
+      { id: 23, section: 0, passageId: 3, text: "In the paragraph rearrangement (P-T), which sentence comes first?", options: ["A) S", "B) T", "C) R", "D) Q", "E) P"], ans: "E" },
+      { id: 24, section: 0, passageId: 3, text: "In the paragraph rearrangement (P-T), which sentence comes second?", options: ["A) S", "B) T", "C) Q", "D) P", "E) R"], ans: "C" },
+      { id: 25, section: 0, passageId: 3, text: "In the paragraph rearrangement (P-T), which sentence comes third?", options: ["A) P", "B) S", "C) R", "D) Q", "E) T"], ans: "C" },
+      { id: 26, section: 0, passageId: 3, text: "In the paragraph rearrangement (P-T), which sentence comes fourth?", options: ["A) S", "B) T", "C) Q", "D) R", "E) P"], ans: "A" },
+      { id: 27, section: 0, passageId: 3, text: "In the paragraph rearrangement (P-T), which sentence comes fifth?", options: ["A) Q", "B) S", "C) T", "D) P", "E) R"], ans: "C" },
+
+      { id: 28, section: 0, text: "Choose the antonym of \"reluctant\".", options: ["A) unwilling", "B) cautious", "C) doubtful", "D) eager", "E) hesitant"], ans: "D" },
+      { id: 29, section: 0, text: "\"To keep someone in the loop\" means:", options: ["A) to repeat their work", "B) to blame them for an error", "C) to delay their decision", "D) to inform them of relevant developments", "E) to prevent their participation"], ans: "D" },
+      { id: 30, section: 0, text: "Choose the grammatically correct sentence.", options: ["A) Each of the officer have passwords.", "B) Each of the officers have a password.", "C) Each of the officers were given an password.", "D) Each of the officers are having a password.", "E) Each of the officers has a password."], ans: "E" },
+
+      // Reasoning Ability (31-65)
+      { id: 31, section: 1, passageId: 4, text: "Who sits immediately to the right of D?", options: ["A) F", "B) E", "C) A", "D) B", "E) C"], ans: "E" },
+      { id: 32, section: 1, passageId: 4, text: "How many persons sit between F and E?", options: ["A) Three", "B) None", "C) One", "D) Two", "E) Four"], ans: "A" },
+      { id: 33, section: 1, passageId: 4, text: "Who sits second from the right?", options: ["A) B", "B) E", "C) C", "D) A", "E) G"], ans: "B" },
+      { id: 34, section: 1, passageId: 4, text: "Which pair sits at the two ends?", options: ["A) A and G", "B) B and E", "C) A and E", "D) F and C", "E) F and G"], ans: "A" },
+      { id: 35, section: 1, passageId: 4, text: "Where does B sit relative to G?", options: ["A) Immediately to the left", "B) Second to the left", "C) Fifth to the left", "D) Third to the left", "E) Fourth to the left"], ans: "E" },
+
+      { id: 36, section: 1, passageId: 5, text: "Whose presentation is on Thursday?", options: ["A) T", "B) Q", "C) S", "D) R", "E) P"], ans: "B" },
+      { id: 37, section: 1, passageId: 5, text: "On which day is S scheduled?", options: ["A) Thursday", "B) Saturday", "C) Friday", "D) Monday", "E) Tuesday"], ans: "E" },
+      { id: 38, section: 1, passageId: 5, text: "How many presentations are scheduled between P and T?", options: ["A) Four", "B) None", "C) Three", "D) Two", "E) One"], ans: "C" },
+      { id: 39, section: 1, passageId: 5, text: "Who presents immediately before U?", options: ["A) T", "B) P", "C) Q", "D) S", "E) R"], ans: "A" },
+      { id: 40, section: 1, passageId: 5, text: "Which pair presents on consecutive days?", options: ["A) Q and T", "B) R and T", "C) P and R", "D) P and U", "E) S and Q"], ans: "A" },
+
+      { id: 41, section: 1, passageId: 6, text: "Which box is at the top?", options: ["A) A", "B) B", "C) E", "D) C", "E) D"], ans: "A" },
+      { id: 42, section: 1, passageId: 6, text: "Which box is immediately above C?", options: ["A) E", "B) F", "C) B", "D) A", "E) D"], ans: "E" },
+      { id: 43, section: 1, passageId: 6, text: "How many boxes are between D and E?", options: ["A) Four", "B) One", "C) Two", "D) Three", "E) None"], ans: "C" },
+      { id: 44, section: 1, passageId: 6, text: "Which box is fourth from the top?", options: ["A) A", "B) C", "C) D", "D) B", "E) E"], ans: "D" },
+      { id: 45, section: 1, passageId: 6, text: "Which box is second from the bottom?", options: ["A) D", "B) A", "C) E", "D) C", "E) B"], ans: "C" },
+
+      { id: 46, section: 1, text: "Statements: All agents are employees. No employee is a visitor.\nConclusions: I. No agent is a visitor. II. All visitors are agents.", options: ["A) Only II follows", "B) Neither I nor II follows", "C) Only I follows", "D) Both I and II follow", "E) Either I or II follows"], ans: "C" },
+      { id: 47, section: 1, text: "Statements: Some policies are documents. All documents are records.\nConclusions: I. Some policies are records. II. All records are policies.", options: ["A) Only II follows", "B) Neither I nor II follows", "C) Only I follows", "D) Both I and II follow", "E) Either I or II follows"], ans: "C" },
+      { id: 48, section: 1, text: "Statements: No files are books. Some books are registers.\nConclusions: I. Some registers are not files. II. No registers are books.", options: ["A) Only II follows", "B) Neither I nor II follows", "C) Only I follows", "D) Both I and II follow", "E) Either I or II follows"], ans: "C" },
+      { id: 49, section: 1, text: "Statements: All clerks are staff. Some staff are trainees.\nConclusions: I. Some clerks are trainees. II. All trainees are clerks.", options: ["A) Only II follows", "B) Neither I nor II follows", "C) Only I follows", "D) Both I and II follow", "E) Either I or II follows"], ans: "B" },
+      { id: 50, section: 1, text: "Statements: Some claims are settled cases. All settled cases are reviewed cases.\nConclusions: I. Some claims are reviewed cases. II. Some reviewed cases are settled cases.", options: ["A) Only II follows", "B) Neither I nor II follows", "C) Only I follows", "D) Both I and II follow", "E) Either I or II follows"], ans: "D" },
+
+      { id: 51, section: 1, text: "Relations: P ≥ Q > R = S ≤ T. Conclusions: I. P > S, II. T > R", options: ["A) Only II follows", "B) Neither I nor II follows", "C) Only I follows", "D) Both I and II follow", "E) Either I or II follows"], ans: "C" },
+      { id: 52, section: 1, text: "Relations: A < B ≤ C = D > E. Conclusions: I. A < D, II. C > E", options: ["A) Only II follows", "B) Neither I nor II follows", "C) Only I follows", "D) Both I and II follow", "E) Either I or II follows"], ans: "D" },
+      { id: 53, section: 1, text: "Relations: L = M ≥ N > O ≤ P. Conclusions: I. L > O, II. P ≥ N", options: ["A) Only II follows", "B) Neither I nor II follows", "C) Only I follows", "D) Both I and II follow", "E) Either I or II follows"], ans: "C" },
+      { id: 54, section: 1, text: "Relations: U > V = W ≥ X < Y. Conclusions: I. U > X, II. Y > W", options: ["A) Only II follows", "B) Neither I nor II follows", "C) Only I follows", "D) Both I and II follow", "E) Either I or II follows"], ans: "C" },
+      { id: 55, section: 1, text: "Relations: H ≤ J < K ≥ L = M. Conclusions: I. H < K, II. M > J", options: ["A) Only II follows", "B) Neither I nor II follows", "C) Only I follows", "D) Both I and II follow", "E) Either I or II follows"], ans: "C" },
+
+      { id: 56, section: 1, passageId: 7, text: "What is the code for \"policy\"?", options: ["A) ka", "B) mi", "C) ne", "D) ta", "E) ru"], ans: "B" },
+      { id: 57, section: 1, passageId: 7, text: "What is the code for \"online\"?", options: ["A) ka", "B) ta", "C) mi", "D) po", "E) ru"], ans: "D" },
+      { id: 58, section: 1, passageId: 7, text: "What is the code for \"claim\"?", options: ["A) ne", "B) ru", "C) ta", "D) po", "E) mi"], ans: "C" },
+
+      { id: 59, section: 1, text: "Ravi walks 8 km north, 6 km east and 8 km south. How far and in which direction is he from the starting point?", options: ["A) 14 km south", "B) 10 km east", "C) 8 km west", "D) 6 km east", "E) 6 km west"], ans: "D" },
+      { id: 60, section: 1, text: "Pointing to a girl, Arun says, \"She is the daughter of the only son of my mother.\" Arun is male. How is Arun related to the girl?", options: ["A) Cousin", "B) Brother", "C) Uncle", "D) Father", "E) Grandfather"], ans: "D" },
+      { id: 61, section: 1, text: "Meera is 12th from the top and 18th from the bottom in a class ranking with no ties. How many students are there?", options: ["A) 30", "B) 29", "C) 31", "D) 28", "E) 32"], ans: "B" },
+      { id: 62, section: 1, text: "In the word INSURANCE, how many pairs of letters have as many letters between them in the word as in the English alphabet? (Forward and reverse)", options: ["A) Four", "B) One", "C) Two", "D) Five", "E) Three"], ans: "B" },
+      { id: 63, section: 1, text: "If each vowel in CLAIM is replaced by the next alphabet letter and each consonant by the previous letter, what is the resulting string?", options: ["A) DKBJN", "B) BLCJL", "C) BKBIL", "D) BKBJL", "E) CKBJL"], ans: "D" },
+      { id: 64, section: 1, text: "Four of the following letter groups follow the same pattern. Find the odd one.", options: ["A) CEG", "B) EGJ", "C) ACE", "D) BDF", "E) DFH"], ans: "B" },
+      { id: 65, section: 1, text: "In the sequence A 7 B # 3 C @ 9 D 2 E % 5 F, how many digits are immediately preceded by a letter and immediately followed by a symbol?", options: ["A) Three", "B) Two", "C) None", "D) Four", "E) One"], ans: "C" },
+
+      // Quantitative Aptitude (66-100)
+      { id: 66, section: 2, text: "48% of 750 + 35% of 400 = ?", options: ["A) 480", "B) 490", "C) 500", "D) 520", "E) 510"], ans: "C" },
+      { id: 67, section: 2, text: "18 × 15 - 144 ÷ 12 + 7² = ?", options: ["A) 317", "B) 307", "C) 327", "D) 337", "E) 297"], ans: "B" },
+      { id: 68, section: 2, text: "√1296 + ∛1728 = ?", options: ["A) 44", "B) 46", "C) 42", "D) 50", "E) 48"], ans: "E" },
+      { id: 69, section: 2, text: "7/12 of 432 + 5/8 of 320 = ?", options: ["A) 442", "B) 472", "C) 462", "D) 432", "E) 452"], ans: "E" },
+      { id: 70, section: 2, text: "24% of ? = 15% of 960", options: ["A) 700", "B) 650", "C) 550", "D) 600", "E) 500"], ans: "D" },
+
+      { id: 71, section: 2, text: "Find the missing term: 7, 12, 22, 42, 82, ?", options: ["A) 142", "B) 172", "C) 152", "D) 162", "E) 122"], ans: "D" },
+      { id: 72, section: 2, text: "Find the missing term: 3, 6, 18, 72, 360, ?", options: ["A) 2160", "B) 2880", "C) 1800", "D) 2520", "E) 1440"], ans: "A" },
+      { id: 73, section: 2, text: "Find the missing term: 11, 16, 25, 38, 55, ?", options: ["A) 78", "B) 74", "C) 72", "D) 80", "E) 76"], ans: "E" },
+      { id: 74, section: 2, text: "Find the missing term: 160, 80, 40, 20, 10, ?", options: ["A) 5", "B) 4", "C) 6", "D) 8", "E) 2"], ans: "A" },
+      { id: 75, section: 2, text: "Find the missing term: 2, 9, 28, 65, 126, ?", options: ["A) 216", "B) 205", "C) 196", "D) 217", "E) 226"], ans: "D" },
+
+      { id: 76, section: 2, text: "Solve equations and compare x & y:\nx² - 11x + 30 = 0\ny² - 7y + 12 = 0", options: ["A) x=y or relationship cannot be determined", "B) x > y", "C) x ≥ y", "D) x ≤ y", "E) x < y"], ans: "B" },
+      { id: 77, section: 2, text: "Solve equations and compare x & y:\nx² - 5x + 6 = 0\ny² - 9y + 20 = 0", options: ["A) x=y or relationship cannot be determined", "B) x > y", "C) x ≥ y", "D) x ≤ y", "E) x < y"], ans: "E" },
+      { id: 78, section: 2, text: "Solve equations and compare x & y:\nx² - 7x + 12 = 0\ny² - 5y + 6 = 0", options: ["A) x=y or relationship cannot be determined", "B) x > y", "C) x ≥ y", "D) x ≤ y", "E) x < y"], ans: "C" },
+      { id: 79, section: 2, text: "Solve equations and compare x & y:\nx² - 9x + 20 = 0\ny² - 11y + 30 = 0", options: ["A) x=y or relationship cannot be determined", "B) x > y", "C) x ≥ y", "D) x ≤ y", "E) x < y"], ans: "D" },
+      { id: 80, section: 2, text: "Solve equations and compare x & y:\nx² - 8x + 15 = 0\ny² - 9y + 20 = 0", options: ["A) x=y or relationship cannot be determined", "B) x > y", "C) x ≥ y", "D) x ≤ y", "E) x < y"], ans: "A" },
+
+      { id: 81, section: 2, passageId: 8, text: "How many policies did branches A and C together issue in May?", options: ["A) 330", "B) 340", "C) 360", "D) 370", "E) 350"], ans: "E" },
+      { id: 82, section: 2, passageId: 8, text: "By what percentage did policies issued by A increase from April to May?", options: ["A) 35%", "B) 20%", "C) 30%", "D) 25%", "E) 40%"], ans: "D" },
+      { id: 83, section: 2, passageId: 8, text: "What is the ratio of April policies of B to May policies of D?", options: ["A) 6:7", "B) 3:4", "C) 5:6", "D) 4:5", "E) 7:8"], ans: "B" },
+      { id: 84, section: 2, passageId: 8, text: "What is the average number of policies issued in May across all five branches?", options: ["A) 220", "B) 200", "C) 180", "D) 190", "E) 210"], ans: "B" },
+      { id: 85, section: 2, passageId: 8, text: "What percentage of all April policies was issued by E?", options: ["A) 15%", "B) 30%", "C) 35%", "D) 25%", "E) 20%"], ans: "E" },
+
+      { id: 86, section: 2, passageId: 9, text: "How many travel claims were received?", options: ["A) 135", "B) 180", "C) 165", "D) 150", "E) 120"], ans: "D" },
+      { id: 87, section: 2, passageId: 9, text: "How many motor claims were settled?", options: ["A) 126", "B) 132", "C) 138", "D) 150", "E) 144"], ans: "E" },
+      { id: 88, section: 2, passageId: 9, text: "How many health claims remained unsettled?", options: ["A) 50", "B) 55", "C) 65", "D) 60", "E) 45"], ans: "D" },
+      { id: 89, section: 2, passageId: 9, text: "What is the ratio of settled fire claims to settled travel claims?", options: ["A) 2:3", "B) 5:6", "C) 1:2", "D) 4:5", "E) 3:4"], ans: "E" },
+      { id: 90, section: 2, passageId: 9, text: "How many claims in total were settled?", options: ["A) 434", "B) 424", "C) 444", "D) 454", "E) 414"], ans: "C" },
+
+      { id: 91, section: 2, text: "An article is marked 25% above cost price and sold at a discount of 12% on marked price. What is the profit percentage?", options: ["A) 15%", "B) 8%", "C) 18%", "D) 10%", "E) 12%"], ans: "D" },
+      { id: 92, section: 2, text: "The simple interest on a sum for 3 years at 8% per annum is ₹1,920. Find the principal.", options: ["A) ₹10,000", "B) ₹8,000", "C) ₹7,000", "D) ₹6,000", "E) ₹9,000"], ans: "B" },
+      { id: 93, section: 2, text: "Find the compound interest on ₹10,000 at 10% per annum for 2 years, compounded annually.", options: ["A) ₹2,200", "B) ₹2,100", "C) ₹2,300", "D) ₹2,000", "E) ₹1,900"], ans: "B" },
+      { id: 94, section: 2, text: "A can complete a job in 12 days and B in 18 days. How long will they take working together?", options: ["A) 8 days", "B) 7.2 days", "C) 10 days", "D) 9 days", "E) 6 days"], ans: "B" },
+      { id: 95, section: 2, text: "A pipe fills a tank in 15 hours and an outlet empties the full tank in 30 hours. If both are open, how long will the empty tank take to fill?", options: ["A) 15 hours", "B) 20 hours", "C) 25 hours", "D) 10 hours", "E) 30 hours"], ans: "E" },
+      { id: 96, section: 2, text: "A train 180 m long passes a pole in 12 seconds. How long will it take to pass a 270 m platform at the same speed?", options: ["A) 24 seconds", "B) 26 seconds", "C) 30 seconds", "D) 28 seconds", "E) 32 seconds"], ans: "C" },
+      { id: 97, section: 2, text: "A boat travels 36 km downstream in 3 hours and 24 km upstream in 4 hours. Find the speed of the current.", options: ["A) 5 km/h", "B) 2 km/h", "C) 1.5 km/h", "D) 4 km/h", "E) 3 km/h"], ans: "E" },
+      { id: 98, section: 2, text: "The present ages of A and B are in the ratio 4:5. After 6 years, the ratio will be 5:6. Find B's present age.", options: ["A) 25 years", "B) 24 years", "C) 36 years", "D) 30 years", "E) 35 years"], ans: "D" },
+      { id: 99, section: 2, text: "A 40-litre mixture contains milk and water in the ratio 3:1. How much water must be added to make the ratio 3:2?", options: ["A) 8 litres", "B) 12 litres", "C) 10 litres", "D) 5 litres", "E) 15 litres"], ans: "C" },
+      { id: 100, section: 2, text: "A bag contains 5 red, 4 blue and 3 green balls. Two balls are drawn together at random without replacement. What is the probability that both are blue?", options: ["A) 1/11", "B) 2/11", "C) 3/11", "D) 1/6", "E) 1/4"], ans: "A" }
+    ];
+
+    const passages = {
+      1: "<strong>Passage (Q1-Q7):</strong><br>A district cooperative introduced a mobile service to help small traders renew their insurance policies. Initially, registrations rose sharply, but many users abandoned the process before payment. A survey found that unfamiliar terms and unclear instructions, rather than the price of policies, caused most difficulties. The cooperative simplified the language and opened a telephone help desk. Completion rates then improved, although staff costs increased. Managers decided to retain the help desk during the renewal season and review its use every month. They also warned that a higher completion rate alone did not prove that customers understood the coverage. A short comprehension check was therefore added before payment. The initiative showed that digital access can widen participation, but meaningful access also requires clear communication and timely assistance.",
+      2: "<strong>Passage (Q8-Q12):</strong><br>An effective complaint system should (8) customers to report problems without difficulty. Each complaint must be (9) promptly and assigned to a responsible officer. Regular analysis can (10) recurring weaknesses. However, collecting information is of little value (11) it leads to action. The aim is to restore confidence and (12) similar problems in future.",
+      3: "<strong>Arrangement (Q23-Q27):</strong><br>P. The team first examined the reasons for delayed settlements.<br>Q. It found that incomplete documents were the main cause.<br>R. It then introduced a checklist for applicants.<br>S. After the checklist was introduced, fewer applications required clarification.<br>T. Consequently, the average settlement time declined.",
+      4: "<strong>Seating Arrangement (Q31-Q35):</strong><br>Seven persons A, B, C, D, E, F and G sit in a straight row facing north. D sits in the middle. A sits third to the left of D. F sits immediately to the right of A. B sits immediately to the left of D. G sits at the extreme right. E sits immediately to the left of G.",
+      5: "<strong>Schedule (Q36-Q40):</strong><br>Six presentations by P, Q, R, S, T and U are scheduled from Monday to Saturday, one per day. R is on Wednesday. P is two days before R. U is on Saturday. Q is immediately after R. T is immediately before U.",
+      6: "<strong>Box Puzzle (Q41-Q45):</strong><br>Six boxes A, B, C, D, E and F are stacked vertically, one above another. C is third from the top. A is two positions above C. F is at the bottom. B is immediately below C. E is immediately above F.",
+      7: "<strong>Coding-Decoding (Q56-Q58):</strong><br>In a code language:<br>\"secure policy service\" is \"ka mi ru\"<br>\"policy claim settled\" is \"mi ta ne\"<br>\"secure claim online\" is \"ka ta po\"",
+      8: "<strong>Data Table (Q81-Q85):</strong><br><table border='1' cellpadding='4' style='border-collapse:collapse;'><tr><th>Branch</th><th>April</th><th>May</th></tr><tr><td>A</td><td>120</td><td>150</td></tr><tr><td>B</td><td>180</td><td>210</td></tr><tr><td>C</td><td>140</td><td>200</td></tr><tr><td>D</td><td>200</td><td>240</td></tr><tr><td>E</td><td>160</td><td>200</td></tr></table>",
+      9: "<strong>Data Caselet (Q86-Q90):</strong><br>A company received 600 claims. Of these, 30% were motor claims, 25% health claims, 20% fire claims and the rest travel claims. Settlement rates were 80% for motor, 60% for health, 75% for fire and 80% for travel. Treat all counts as exact."
+    };
+
+    let currentSectionIndex = 0;
+    let currentQuestionIndex = 0;
+    let userAnswers = {};
+    let sectionTimes = [1200, 1200, 1200];
+    let timerInterval = null;
+
+    const sections = [
+      { name: "English Language", start: 0, count: 30 },
+      { name: "Reasoning Ability", start: 30, count: 35 },
+      { name: "Quantitative Aptitude", start: 65, count: 35 }
+    ];
+
+    function startExam(e) {
+      e.preventDefault();
+      candidateName = document.getElementById('candidateName').value.trim();
+      candidateRoll = document.getElementById('candidateRoll').value.trim();
+
+      if (!candidateName || !candidateRoll) return;
+
+      document.getElementById('landingContainer').style.display = 'none';
+      document.getElementById('examContainer').style.display = 'flex';
+      document.getElementById('sectionBar').style.display = 'flex';
+      
+      document.getElementById('displayName').innerText = candidateName;
+      document.getElementById('displayRoll').innerText = candidateRoll;
+      document.getElementById('headerCandidateInfo').style.display = 'block';
+      document.getElementById('headerSubmitBtn').style.display = 'block';
+
+      startSectionTimer();
+      renderPalette();
+      loadQuestion();
+    }
+
+    function startSectionTimer() {
+      if (timerInterval) clearInterval(timerInterval);
+      
+      timerInterval = setInterval(() => {
+        if (sectionTimes[currentSectionIndex] > 0) {
+          sectionTimes[currentSectionIndex]--;
+          updateTimerDisplay();
+        } else {
+          alert(`Time is up for ${sections[currentSectionIndex].name}! Moving to the next section.`);
+          if (currentSectionIndex < 2) {
+            switchSection(currentSectionIndex + 1, true);
+          } else {
+            clearInterval(timerInterval);
+            finishExam();
+          }
+        }
+      }, 1000);
+      updateTimerDisplay();
+    }
+
+    function updateTimerDisplay() {
+      const time = sectionTimes[currentSectionIndex];
+      const mins = Math.floor(time / 60);
+      const secs = time % 60;
+      document.getElementById('timerDisplay').innerText = 
+        `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+    }
+
+    function switchSection(secIndex, force = false) {
+      if (secIndex === currentSectionIndex) return;
+      
+      if (!force && secIndex < currentSectionIndex) {
+        alert("Going back to previous sections or transferring unused time is not allowed.");
+        return;
+      }
+
+      document.querySelectorAll('.section-tab').forEach((tab, idx) => {
+        tab.classList.remove('active');
+        if (idx === secIndex) {
+          tab.classList.add('active');
+          tab.classList.remove('disabled');
+        }
+      });
+
+      currentSectionIndex = secIndex;
+      currentQuestionIndex = 0;
+      startSectionTimer();
+      renderPalette();
+      loadQuestion();
+    }
+
+    function getGlobalQuestionIndex() {
+      return sections[currentSectionIndex].start + currentQuestionIndex;
+    }
+
+    function loadQuestion() {
+      const gIndex = getGlobalQuestionIndex();
+      const q = questionsData[gIndex];
+
+      document.getElementById('qNumberText').innerText = `Question ${q.id} (of 100)`;
+      document.getElementById('qText').innerText = q.text;
+
+      const passageBox = document.getElementById('passageContainer');
+      if (q.passageId && passages[q.passageId]) {
+        passageBox.innerHTML = passages[q.passageId];
+        passageBox.style.display = 'block';
+      } else {
+        passageBox.style.display = 'none';
+      }
+
+      const optionsContainer = document.getElementById('optionsContainer');
+      optionsContainer.innerHTML = '';
+
+      const userChoice = userAnswers[q.id];
+
+      q.options.forEach((optStr) => {
+        const optionKey = optStr.charAt(0);
+        const btn = document.createElement('button');
+        btn.className = 'option-btn';
+        btn.innerText = optStr;
+
+        if (userChoice) {
+          btn.classList.add('disabled');
+          if (optionKey === q.ans) {
+            btn.classList.add('correct');
+          }
+          if (userChoice === optionKey && optionKey !== q.ans) {
+            btn.classList.add('wrong');
+          }
+        } else {
+          btn.onclick = () => selectOption(q.id, optionKey);
+        }
+
+        optionsContainer.appendChild(btn);
+      });
+
+      updatePaletteHighlight();
+    }
+
+    function selectOption(qId, selectedOpt) {
+      userAnswers[qId] = selectedOpt;
+      loadQuestion();
+      renderPalette();
+    }
+
+    function renderPalette() {
+      const paletteGrid = document.getElementById('paletteGrid');
+      paletteGrid.innerHTML = '';
+
+      const start = sections[currentSectionIndex].start;
+      const count = sections[currentSectionIndex].count;
+
+      for (let i = 0; i < count; i++) {
+        const gIdx = start + i;
+        const q = questionsData[gIdx];
+        const btn = document.createElement('button');
+        btn.className = 'q-num-btn';
+        btn.innerText = q.id;
+
+        const userAns = userAnswers[q.id];
+        if (userAns) {
+          if (userAns === q.ans) {
+            btn.classList.add('answered-right');
+          } else {
+            btn.classList.add('answered-wrong');
+          }
+        }
+
+        if (i === currentQuestionIndex) {
+          btn.classList.add('active');
+        }
+
+        btn.onclick = () => {
+          currentQuestionIndex = i;
+          loadQuestion();
+        };
+
+        paletteGrid.appendChild(btn);
+      }
+    }
+
+    function updatePaletteHighlight() {
+      const buttons = document.querySelectorAll('.q-num-btn');
+      buttons.forEach((btn, idx) => {
+        if (idx === currentQuestionIndex) {
+          btn.classList.add('active');
+        } else {
+          btn.classList.remove('active');
+        }
+      });
+    }
+
+    function nextQuestion() {
+      if (currentQuestionIndex < sections[currentSectionIndex].count - 1) {
+        currentQuestionIndex++;
+        loadQuestion();
+      } else if (currentSectionIndex < 2) {
+        if (confirm("End of this section. Move to the next section?")) {
+          switchSection(currentSectionIndex + 1, true);
+        }
+      }
+    }
+
+    function prevQuestion() {
+      if (currentQuestionIndex > 0) {
+        currentQuestionIndex--;
+        loadQuestion();
+      }
+    }
+
+    function confirmSubmit() {
+      if (confirm("Are you sure you want to submit your test?")) {
+        clearInterval(timerInterval);
+        finishExam();
+      }
+    }
+
+    function finishExam() {
+      document.getElementById('examContainer').style.display = 'none';
+      document.getElementById('sectionBar').style.display = 'none';
+      document.getElementById('headerSubmitBtn').style.display = 'none';
+      document.getElementById('resultContainer').style.display = 'block';
+
+      document.getElementById('resName').innerText = candidateName;
+      document.getElementById('resRoll').innerText = candidateRoll;
+      document.getElementById('pdfName').innerText = candidateName;
+      document.getElementById('pdfRoll').innerText = candidateRoll;
+
+      calculateAndShowResults();
+    }
+
+    function calculateAndShowResults() {
+      let totalMarks = 0;
+      const summaryBody = document.getElementById('summaryTableBody');
+      const pdfBody = document.getElementById('pdfTableBody');
+      summaryBody.innerHTML = '';
+      pdfBody.innerHTML = '';
+
+      sections.forEach((sec) => {
+        let attempted = 0;
+        let correct = 0;
+        let wrong = 0;
+
+        for (let i = sec.start; i < sec.start + sec.count; i++) {
+          const q = questionsData[i];
+          const chosen = userAnswers[q.id];
+          if (chosen) {
+            attempted++;
+            if (chosen === q.ans) correct++;
+            else wrong++;
+          }
+        }
+
+        const score = (correct * 1) - (wrong * 0.25);
+        totalMarks += score;
+
+        summaryBody.innerHTML += `
+          <tr>
+            <td>${sec.name}</td>
+            <td>${attempted} / ${sec.count}</td>
+            <td>${correct}</td>
+            <td>${wrong}</td>
+            <td><strong>${score.toFixed(2)}</strong></td>
+          </tr>
+        `;
+      });
+
+      document.getElementById('totalScoreText').innerText = `Total Score: ${totalMarks.toFixed(2)} / 100`;
+
+      questionsData.forEach((q) => {
+        const chosen = userAnswers[q.id] || "Not Attempted";
+        const isCorrect = chosen === q.ans;
+        let status = "Unattempted";
+        let marks = "0.00";
+
+        if (chosen !== "Not Attempted") {
+          if (isCorrect) {
+            status = "Correct";
+            marks = "+1.00";
+          } else {
+            status = "Wrong";
+            marks = "-0.25";
+          }
+        }
+
+        pdfBody.innerHTML += `
+          <tr>
+            <td>${q.id}</td>
+            <td style="text-align: left;">${q.text}</td>
+            <td>${chosen}</td>
+            <td>${q.ans}</td>
+            <td style="color: ${isCorrect ? 'green' : (chosen === 'Not Attempted' ? 'black' : 'red')}">${status}</td>
+            <td>${marks}</td>
+          </tr>
+        `;
+      });
+    }
+
+    function downloadPDF() {
+      const { jsPDF } = window.jspdf;
+      const pdfRenderArea = document.getElementById('pdf-render-area');
+      
+      pdfRenderArea.style.display = 'block';
+
+      html2canvas(pdfRenderArea, { scale: 2 }).then(canvas => {
+        const imgData = canvas.toDataURL('image/png');
+        const pdf = new jsPDF('p', 'mm', 'a4');
+        const imgWidth = 210; 
+        const pageHeight = 295;  
+        const imgHeight = (canvas.height * imgWidth) / canvas.width;
+        let heightLeft = imgHeight;
+        let position = 0;
+
+        pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+        heightLeft -= pageHeight;
+
+        while (heightLeft >= 0) {
+          position = heightLeft - imgHeight;
+          pdf.addPage();
+          pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+          heightLeft -= pageHeight;
+        }
+
+        pdf.save(`${candidateName.replace(/\s+/g, '_')}_NICL_Response_Sheet.pdf`);
+        pdfRenderArea.style.display = 'none';
+      });
+    }
+  </script>
+</body>
+</html>
